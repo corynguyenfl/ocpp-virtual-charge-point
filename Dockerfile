@@ -23,13 +23,21 @@ COPY --from=builder --chown=vcp:nodejs /app/index_16.ts ./
 COPY --from=builder --chown=vcp:nodejs /app/index_201.ts ./
 COPY --from=builder --chown=vcp:nodejs /app/index_21.ts ./
 COPY --from=builder --chown=vcp:nodejs /app/package.json ./
+# The fleet-controller (spawns/supervises N of this same image's VCP
+# entrypoints as sibling processes, plus its own web UI) - an alternate
+# ENTRY_POINT for this same image, not a separate one.
+COPY --from=builder --chown=vcp:nodejs /app/fleet-controller ./fleet-controller
 
 # Environment variables
 ENV ENTRY_POINT=index_16.ts
 ENV ADMIN_PORT=9999
+# Only read when ENTRY_POINT=fleet-controller/server.ts.
+ENV CONTROLLER_PORT=8787
 
-# Expose admin API port
-EXPOSE 9999
+# Admin API port (single-VCP mode) and fleet-controller port (fleet mode) -
+# only one applies at a time depending on ENTRY_POINT, harmless to expose both.
+EXPOSE 9999 8787
 
-# Run the application
-CMD ["sh", "-c", "npx tsx ${ENTRY_POINT}"]
+# Run the application - local tsx binary, not npx, so startup doesn't touch
+# the npm registry at all inside the container.
+CMD ["sh", "-c", "./node_modules/.bin/tsx ${ENTRY_POINT}"]
