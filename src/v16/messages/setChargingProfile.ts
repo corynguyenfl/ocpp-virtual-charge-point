@@ -2,7 +2,11 @@ import { z } from "zod";
 import { type OcppCall, OcppIncoming } from "../../ocppMessage";
 import { isQuirkEnabled } from "../../vendorQuirks";
 import type { VCP } from "../../vcp";
-import { ChargingProfileSchema, ConnectorIdSchema } from "./_common";
+import {
+  ChargingProfileSchema,
+  ConnectorIdSchema,
+  wattsFromAmps,
+} from "./_common";
 
 const SetChargingProfileReqSchema = z.object({
   connectorId: ConnectorIdSchema,
@@ -43,8 +47,26 @@ class SetChargingProfileOcppMessage extends OcppIncoming<
       });
       return;
     }
+    vcp.chargingProfiles.set({
+      connectorId: call.payload.connectorId,
+      chargingProfileId: profile.chargingProfileId,
+      transactionId: profile.transactionId ?? null,
+      stackLevel: profile.stackLevel,
+      chargingProfilePurpose: profile.chargingProfilePurpose,
+      limitWatts: wattsFromSchedule(profile.chargingSchedule),
+    });
     vcp.respond(this.response(call, { status: "Accepted" }));
   };
+}
+
+function wattsFromSchedule(
+  schedule: z.infer<typeof ChargingProfileSchema>["chargingSchedule"],
+): number {
+  const period = schedule.chargingSchedulePeriod[0];
+  if (schedule.chargingRateUnit === "W") {
+    return period.limit;
+  }
+  return wattsFromAmps(period.limit, period.numberPhases);
 }
 
 export const setChargingProfileOcppMessage = new SetChargingProfileOcppMessage(

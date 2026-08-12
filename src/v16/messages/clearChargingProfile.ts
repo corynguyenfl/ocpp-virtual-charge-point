@@ -26,7 +26,19 @@ class ClearChargingProfileOcppMessage extends OcppIncoming<
     vcp: VCP,
     call: OcppCall<z.infer<ClearChargingProfileReqType>>,
   ): Promise<void> => {
-    vcp.respond(this.response(call, { status: "Accepted" }));
+    const filter = {
+      id: call.payload.id ?? null,
+      connectorId: call.payload.connectorId ?? null,
+      chargingProfilePurpose: call.payload.chargingProfilePurpose ?? null,
+      stackLevel: call.payload.stackLevel ?? null,
+    };
+    const anyFilterGiven = Object.values(filter).some((v) => v !== null);
+    const removed = vcp.chargingProfiles.clear(filter);
+    // "Unknown" means a *targeted* clear matched nothing; clearing
+    // everything (no filter given) is always Accepted even if there was
+    // nothing to remove.
+    const status = anyFilterGiven && removed === 0 ? "Unknown" : "Accepted";
+    vcp.respond(this.response(call, { status }));
   };
 }
 

@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+// Standard single-phase 230V assumption for converting an Amps rate to
+// Watts - real chargers report/limit per their actual supply, but nothing
+// here models supply voltage.
+export const ASSUMED_VOLTAGE = 230;
+
+export function wattsFromAmps(
+  amps: number,
+  numberPhases?: number | null,
+): number {
+  return amps * ASSUMED_VOLTAGE * (numberPhases ?? 1);
+}
+
 export const ConnectorIdSchema = z.number().int().nonnegative();
 
 export const IdTokenSchema = z.string().max(36);

@@ -5,6 +5,7 @@ import { serve, type ServerType } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { ChargingProfileStore } from "./chargingProfileStore";
 import { logger } from "./logger";
 import { call } from "./messageFactory";
 import type { OcppCall, OcppCallError, OcppCallResult } from "./ocppMessage";
@@ -52,6 +53,12 @@ export class VCP {
   private postMessageActions: Record<string, () => void | Promise<void>> = {};
 
   transactionManager = new TransactionManager();
+
+  // Every profile a CSMS has set at once, with real purpose/stackLevel
+  // priority (see src/chargingProfileStore.ts) - populated by
+  // src/v16/messages/setChargingProfile.ts and clearChargingProfile.ts, read
+  // by startTransaction.ts's periodic MeterValues.
+  chargingProfiles = new ChargingProfileStore();
 
   constructor(private vcpOptions: VCPOptions) {
     this.messageHandler = resolveMessageHandler(vcpOptions.ocppVersion);

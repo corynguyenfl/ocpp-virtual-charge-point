@@ -6,10 +6,25 @@ import {
 } from "../../ocppMessage";
 import { resolveTokenPlaceholder } from "../../tokenPlaceholder";
 import type { VCP } from "../../vcp";
-import { ConnectorIdSchema, IdTagInfoSchema, IdTokenSchema } from "./_common";
+import {
+  ConnectorIdSchema,
+  IdTagInfoSchema,
+  IdTokenSchema,
+  wattsFromAmps,
+} from "./_common";
 import { meterValuesOcppMessage } from "./meterValues";
 import { statusNotificationOcppMessage } from "./statusNotification";
 import { stopTransactionOcppMessage } from "./stopTransaction";
+
+// This charger's own physical ceiling (e.g. its wired supply/breaker
+// rating) - independent of whatever SetChargingProfile a CSMS sends, the
+// same way a real charger can't exceed its own hardware regardless of what
+// it's told. Configurable per instance (each simulated charger is its own
+// process) via MAX_CHARGE_RATE_A; 32A is a common single-phase Level 2 max.
+const DEFAULT_MAX_CHARGE_RATE_A = 32;
+const maxChargeRateA =
+  Number(process.env.MAX_CHARGE_RATE_A) || DEFAULT_MAX_CHARGE_RATE_A;
+const SIMULATED_MAX_POWER_W = wattsFromAmps(maxChargeRateA);
 
 const StartTransactionReqSchema = z.object({
   connectorId: ConnectorIdSchema,
@@ -59,6 +74,32 @@ class StartTransactionOcppMessage extends OcppOutgoing<
                     value: (transactionState.meterValue / 1000).toString(),
                     measurand: "Energy.Active.Import.Register",
                     unit: "kWh",
+                  },
+                  // Some CSMS integrations (e.g. ocpp16j-mqtt's serial
+                  // bridge) only compute instantaneous power from a
+                  // Power.Active.Import sample and ignore the energy
+                  // register entirely - without this, they'd never see a
+                  // charging rate for this transaction. Capped at this
+                  // charger's own physical max AND the effective profile
+                  // ceiling (real TxProfile/TxDefaultProfile/
+                  // ChargePointMaxProfile priority - see
+                  // vcp.chargingProfiles), so both "this charger can't
+                  // physically exceed its wiring" and "a CSMS's
+                  // load-shedding decision is visible in reported power"
+                  // hold - the energy register above does NOT slow down to
+                  // match, that would need tracking actual integrated
+                  // energy instead of TransactionManager's fixed time-based
+                  // ramp.
+                  {
+                    value: Math.min(
+                      SIMULATED_MAX_POWER_W,
+                      vcp.chargingProfiles.effectiveLimitWatts(
+                        call.payload.connectorId,
+                        result.payload.transactionId,
+                      ) ?? Number.POSITIVE_INFINITY,
+                    ).toString(),
+                    measurand: "Power.Active.Import",
+                    unit: "W",
                   },
                 ],
               },

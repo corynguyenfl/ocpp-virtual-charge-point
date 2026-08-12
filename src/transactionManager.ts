@@ -1,3 +1,4 @@
+import { logger } from "./logger";
 import type { VCP } from "./vcp";
 
 const METER_VALUES_INTERVAL_SEC = 15;
@@ -79,7 +80,16 @@ export class TransactionManager {
 
   stopTransaction(transactionId: TransactionId) {
     const transaction = this.transactions.get(transactionId);
-    if (transaction?.meterValuesTimer) {
+    if (!transaction) {
+      // Stopping an id we never started leaves the *real* transaction (if
+      // any) with its periodic MeterValues timer still running forever -
+      // this should never happen silently.
+      logger.warn(
+        `stopTransaction(${transactionId}): no such transaction - it will keep sending periodic MeterValues, if one is running under a different id`,
+      );
+      return;
+    }
+    if (transaction.meterValuesTimer) {
       clearInterval(transaction.meterValuesTimer);
     }
     this.transactions.delete(transactionId);
