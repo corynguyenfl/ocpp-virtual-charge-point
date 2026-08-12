@@ -48,6 +48,7 @@ interface Spec {
   ver: OcppVersion;
   wsUrl: string;
   port: number;
+  maxChargeRateA: number;
   quirks: string[];
 }
 
@@ -69,9 +70,14 @@ interface Instance {
 export class InstanceManager extends EventEmitter {
   private instances = new Map<number, Instance>();
   private nextUid = 1;
-  private lastLaunch: { wsUrl: string; ver: OcppVersion } = {
+  private lastLaunch: {
+    wsUrl: string;
+    ver: OcppVersion;
+    maxChargeRateA: number;
+  } = {
     wsUrl: "ws://localhost:9000/ocpp",
     ver: "1.6",
+    maxChargeRateA: 32,
   };
 
   launch(req: LaunchRequest): ChargerRecord[] {
@@ -88,6 +94,7 @@ export class InstanceManager extends EventEmitter {
         ver: req.ver,
         wsUrl: req.wsUrl,
         port,
+        maxChargeRateA: req.maxChargeRateA,
         quirks: req.quirks,
       };
       const delayMs =
@@ -98,7 +105,11 @@ export class InstanceManager extends EventEmitter {
       created.push(record);
       setTimeout(() => this.spawnProcess(uid), delayMs);
     }
-    this.lastLaunch = { wsUrl: req.wsUrl, ver: req.ver };
+    this.lastLaunch = {
+      wsUrl: req.wsUrl,
+      ver: req.ver,
+      maxChargeRateA: req.maxChargeRateA,
+    };
     return created;
   }
 
@@ -109,6 +120,7 @@ export class InstanceManager extends EventEmitter {
       ver: spec.ver,
       wsUrl: spec.wsUrl,
       port: spec.port,
+      maxChargeRateA: spec.maxChargeRateA,
       quirks: spec.quirks,
       conn: "connecting",
       tx: "idle",
@@ -138,8 +150,13 @@ export class InstanceManager extends EventEmitter {
       CP_ID: spec.id,
       ADMIN_PORT: String(spec.port),
       VENDOR_QUIRKS: spec.quirks.join(","),
+      MAX_CHARGE_RATE_A: String(spec.maxChargeRateA),
     };
-    const proc = spawn("npx", ["tsx", entry], { cwd: REPO_ROOT, env });
+    // Invoke the local tsx binary directly rather than through `npx tsx` -
+    // npx re-resolves the package from scratch on every single spawn, which
+    // adds real, avoidable seconds to every reconnect/restart/scenario.
+    const tsxBin = path.join(REPO_ROOT, "node_modules", ".bin", "tsx");
+    const proc = spawn(tsxBin, [entry], { cwd: REPO_ROOT, env });
     inst.proc = proc;
     inst.killedByController = false;
     inst.record.conn = "connecting";
@@ -187,9 +204,15 @@ export class InstanceManager extends EventEmitter {
           changed = true;
           break;
         case "txStopped":
-          inst.record.tx = "idle";
-          inst.record.txId = null;
-          changed = true;
+          // Only clear an actually-tracked transaction if this stop names
+          // it specifically - a stop referencing some other (e.g. stale or
+          // mistargeted) id must not make a still-running transaction look
+          // idle in the UI while its periodic MeterValues keep firing.
+          if (inst.record.txId === null || signal.txId === inst.record.txId) {
+            inst.record.tx = "idle";
+            inst.record.txId = null;
+            changed = true;
+          }
           break;
         case "fault":
           inst.record.tx = "faulted";
@@ -304,9 +327,15 @@ export class InstanceManager extends EventEmitter {
       .map((i) => i.record.uid);
   }
 
-  cloneTemplate(): { wsUrl: string; ver: OcppVersion } {
+  cloneTemplate(): { wsUrl: string; ver: OcppVersion; maxChargeRateA: number } {
     const any = Array.from(this.instances.values())[0];
-    return any ? { wsUrl: any.spec.wsUrl, ver: any.spec.ver } : this.lastLaunch;
+    return any
+      ? {
+          wsUrl: any.spec.wsUrl,
+          ver: any.spec.ver,
+          maxChargeRateA: any.spec.maxChargeRateA,
+        }
+      : this.lastLaunch;
   }
 
   quirkEnvString(): string {

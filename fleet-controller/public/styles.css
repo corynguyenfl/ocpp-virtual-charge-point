@@ -81,7 +81,7 @@ body {
 }
 #header .subtitle {
   font-size: 12px;
-  color: #6b7684;
+  color: #8b96a5;
 }
 .tabgroup {
   display: flex;
@@ -119,7 +119,7 @@ body {
   border-radius: 3px;
   font-size: 11px;
   background: transparent;
-  color: #6b7684;
+  color: #8b96a5;
 }
 .pillgroup button.active {
   background: #232b35;
@@ -154,10 +154,10 @@ body {
   flex: 0 1 auto;
   overflow: hidden;
   font-size: 11.5px;
-  color: #6b7684;
+  color: #8b96a5;
 }
 .target-rate .label {
-  color: #4b5563;
+  color: #8b96a5;
   flex: none;
 }
 .target-rate .divider {
@@ -227,7 +227,7 @@ body {
 }
 .faint {
   font-size: 11px;
-  color: #5c6673;
+  color: #8b96a5;
 }
 .spacer {
   flex: 1;
@@ -256,7 +256,7 @@ body {
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.7px;
-  color: #525c69;
+  color: #8b96a5;
 }
 .fleet-head.compact {
   grid-template-columns: 20px minmax(122px, 1.5fr) minmax(78px, 1fr) minmax(
@@ -333,7 +333,7 @@ body {
 }
 .cell-ver {
   font-size: 11px;
-  color: #66707d;
+  color: #8b96a5;
 }
 .cell-conn {
   font-size: 11.5px;
@@ -374,7 +374,7 @@ body {
 }
 .cell-tail {
   font-size: 11px;
-  color: #5f6a78;
+  color: #8b96a5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -417,7 +417,7 @@ body {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: #525c69;
+  color: #8b96a5;
   font-weight: 600;
 }
 .rule {
@@ -458,7 +458,7 @@ body {
   border-radius: 3px;
   background: #151a21;
   border: 1px solid #232b35;
-  color: #6b7684;
+  color: #8b96a5;
 }
 .scenario-desc {
   margin: 0;
@@ -491,7 +491,7 @@ body {
   background: #0b0e12;
   border: 1px solid #232b35;
   border-radius: 4px;
-  color: #4f5967;
+  color: #8b96a5;
   font-size: 11.5px;
   cursor: not-allowed;
 }
@@ -548,7 +548,7 @@ body {
 }
 .quirk-applied {
   font-size: 11px;
-  color: #5c6673;
+  color: #8b96a5;
 }
 .dropzone {
   display: flex;
@@ -609,13 +609,17 @@ body {
   border-color: #38bdf8;
   color: #7dd3fc;
 }
+.btn-danger:hover {
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
 .btn-close {
   height: 23px;
   width: 23px;
   background: transparent;
   border: 1px solid #1e242c;
   border-radius: 4px;
-  color: #6b7684;
+  color: #8b96a5;
   font-size: 13px;
   line-height: 1;
 }
@@ -637,7 +641,7 @@ body {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #4f5967;
+  color: #8b96a5;
 }
 .detail-grid .value {
   font-size: 12px;
@@ -648,7 +652,7 @@ body {
   gap: 8px;
   margin-top: 10px;
   font-size: 11px;
-  color: #5c6673;
+  color: #8b96a5;
 }
 .detail-meta .sep {
   color: #2b3440;
@@ -694,7 +698,7 @@ body {
 }
 .log-row .time {
   font-size: 10.5px;
-  color: #414b58;
+  color: #8b96a5;
 }
 .log-row .msg {
   min-width: 0;
@@ -706,7 +710,7 @@ body {
 }
 .log-row .summary {
   font-size: 11.5px;
-  color: #5f6a78;
+  color: #8b96a5;
 }
 .log-raw {
   margin: 5px 0 6px;
@@ -784,6 +788,7 @@ body {
 #rail {
   display: flex;
   flex-direction: column;
+  height: 208px;
   border-top: 1px solid #1b2129;
   background: #0a0c0f;
 }
@@ -800,7 +805,7 @@ body {
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.7px;
-  color: #525c69;
+  color: #8b96a5;
 }
 .btn-pause {
   height: 20px;
@@ -808,7 +813,7 @@ body {
   border: 1px solid #1e242c;
   border-radius: 4px;
   background: transparent;
-  color: #6b7684;
+  color: #8b96a5;
   font-size: 11px;
 }
 .btn-pause.on {
@@ -834,7 +839,7 @@ body {
 }
 .rail-line .time {
   font-size: 11px;
-  color: #3f4855;
+  color: #8b96a5;
 }
 .rail-line .cpid {
   font-size: 11px;
@@ -845,7 +850,7 @@ body {
 }
 .rail-line .summary-cell {
   font-size: 11px;
-  color: #5f6a78;
+  color: #8b96a5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -898,7 +903,7 @@ body {
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #525c69;
+  color: #8b96a5;
 }
 .modal-body input {
   height: 26px;
@@ -936,7 +941,7 @@ body {
   border: 1px solid #1b2129;
   border-radius: 5px;
   font-size: 11px;
-  color: #5f6a78;
+  color: #8b96a5;
   line-height: 1.6;
 }
 .modal-footer {

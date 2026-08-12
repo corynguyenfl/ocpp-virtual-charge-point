@@ -14,7 +14,7 @@ export type Signal =
   | { kind: "traffic" } // any message at all - proves the WS is open
   | { kind: "txPreparing" }
   | { kind: "txStarted"; txId: number }
-  | { kind: "txStopped" }
+  | { kind: "txStopped"; txId: number | null }
   | { kind: "fault" }
   | { kind: "clearFault" }
   | { kind: "meter"; valueWh: number }
@@ -143,9 +143,9 @@ export class InstanceLogParser {
     if (dir === "in" && action === "RemoteStartTransaction") {
       signals.push({ kind: "txPreparing" });
     } else if (dir === "in" && action === "RemoteStopTransaction") {
-      signals.push({ kind: "txStopped" });
+      signals.push({ kind: "txStopped", txId: numericOrNull(p.transactionId) });
     } else if (action === "StopTransaction") {
-      signals.push({ kind: "txStopped" });
+      signals.push({ kind: "txStopped", txId: numericOrNull(p.transactionId) });
     } else if (action === "StatusNotification") {
       const status = p.status;
       if (status === "Faulted") signals.push({ kind: "fault" });
@@ -174,6 +174,10 @@ export class InstanceLogParser {
       signals.push({ kind: "txStarted", txId: p.transactionId });
     }
   }
+}
+
+function numericOrNull(value: unknown): number | null {
+  return typeof value === "number" ? value : null;
 }
 
 function extractMeterWh(payload: Record<string, unknown>): number | null {

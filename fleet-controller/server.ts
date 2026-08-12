@@ -51,6 +51,7 @@ app.post("/api/launch", async (c) => {
     ver: body.ver,
     staggerSeconds: Number(body.staggerSeconds) || 0,
     quirks: Array.isArray(body.quirks) ? body.quirks : [],
+    maxChargeRateA: Number(body.maxChargeRateA) || 32,
   });
   return c.json({ created });
 });
@@ -58,6 +59,12 @@ app.post("/api/launch", async (c) => {
 app.post("/api/instance/:uid/reconnect", (c) => {
   const uid = Number.parseInt(c.req.param("uid"), 10);
   manager.restart(uid);
+  return c.json({ ok: true });
+});
+
+app.delete("/api/instance/:uid", (c) => {
+  const uid = Number.parseInt(c.req.param("uid"), 10);
+  manager.remove(uid);
   return c.json({ ok: true });
 });
 

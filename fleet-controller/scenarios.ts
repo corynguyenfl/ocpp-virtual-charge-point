@@ -175,6 +175,7 @@ export class ScenarioRunner {
       ver: template.ver,
       staggerSeconds: 10,
       quirks: [],
+      maxChargeRateA: template.maxChargeRateA,
     });
   }
 }

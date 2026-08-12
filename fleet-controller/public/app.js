@@ -39,7 +39,11 @@ const PAYLOADS = {
     timestamp: new Date().toISOString(),
   },
   StopTransaction: {
-    transactionId: 10041,
+    // 0 is VCP's placeholder for "resolve to whatever transaction is
+    // actually running" (see beforeSend in src/v16/messages/stopTransaction.ts).
+    // A hardcoded fake id here would silently target no transaction at all -
+    // the real one keeps its periodic MeterValues timer running forever.
+    transactionId: 0,
     meterStop: 7420,
     timestamp: new Date().toISOString(),
     reason: "Local",
@@ -98,6 +102,7 @@ const state = {
     wsUrl: "ws://localhost:9000/ocpp",
     ver: "1.6",
     staggerSeconds: 20,
+    maxChargeRateA: 32,
     quirks: {},
   },
   msgRate: 0,
@@ -133,7 +138,7 @@ function connColor(c) {
     ? "#34d399"
     : c.conn === "connecting"
       ? "#fbbf24"
-      : "#6b7280";
+      : "#7b8695";
 }
 function dotColor(c) {
   if (c.conn !== "connected")
@@ -149,7 +154,7 @@ function txColor(c) {
       ? "#f87171"
       : c.tx === "preparing"
         ? "#38bdf8"
-        : "#6b7280";
+        : "#7b8695";
 }
 function dirColor(dir) {
   return dir === "in" ? IN : dir === "err" ? ERR : OUT;
@@ -384,7 +389,7 @@ function renderScenarioSection() {
     <div class="section-head spaced">
       <h2>Vendor quirks</h2>
       <div class="rule"></div>
-      <span class="mono" style="font-size:11px;color:#4b5563;">VENDOR_QUIRKS=</span>
+      <span class="mono" style="font-size:11px;color:#8b96a5;">VENDOR_QUIRKS=</span>
       <span class="mono" style="font-size:11px;color:#e0a83a;">${esc(enabledQuirkNames.join(",") || "—")}</span>
     </div>
     <div class="quirk-list">${quirkRows}</div>
@@ -396,7 +401,7 @@ function renderScenarioSection() {
     <div class="dropzone">
       <div style="flex:1;">
         <div style="font-size:12.5px;color:#9aa4b1;">Import a CSV curve to drive charging power across the fleet.</div>
-        <div class="mono" style="font-size:11px;color:#4f5967;margin-top:4px;">TimeStamp,Percent — applied to ${state.target === "selected" ? `${selCount} selected chargers` : "all chargers"}</div>
+        <div class="mono" style="font-size:11px;color:#8b96a5;margin-top:4px;">TimeStamp,Percent — applied to ${state.target === "selected" ? `${selCount} selected chargers` : "all chargers"}</div>
       </div>
       <button class="btn-small" disabled title="Not implemented yet">Choose CSV…</button>
     </div>
@@ -464,7 +469,7 @@ function renderDetail() {
       `<option value="${esc(a)}" ${a === state.action ? "selected" : ""}>${esc(a)}</option>`,
   ).join("");
   let payloadStatus = "valid JSON";
-  let payloadStatusColor = "#4f5967";
+  let payloadStatusColor = "#8b96a5";
   let validPayload = true;
   try {
     JSON.parse(state.payload);
@@ -482,6 +487,7 @@ function renderDetail() {
           <span class="cp-id mono">${esc(c.id)}</span>
           <div class="spacer"></div>
           <button data-act="reconnect" data-uid="${c.uid}" class="btn-small">Reconnect</button>
+          <button data-act="remove-charger" data-uid="${c.uid}" class="btn-small btn-danger">Remove</button>
           <button data-act="close-detail" class="btn-close">✕</button>
         </div>
         <div class="detail-grid">
@@ -491,14 +497,14 @@ function renderDetail() {
           <div class="field"><span class="label">meter</span><span class="value mono">${(c.meter / 1000).toFixed(2)} kWh</span></div>
         </div>
         <div class="detail-meta mono">
-          <span>OCPP ${esc(c.ver)}</span><span class="sep">·</span><span>admin :${c.port}</span><span class="sep">·</span><span id="detail-uptime">uptime ${fmtUptime(c.since)}</span>
+          <span>OCPP ${esc(c.ver)}</span><span class="sep">·</span><span>max ${c.maxChargeRateA}A</span><span class="sep">·</span><span>admin :${c.port}</span><span class="sep">·</span><span id="detail-uptime">uptime ${fmtUptime(c.since)}</span>
         </div>
       </div>
       <div class="quick-actions mono">${quickButtons}</div>
       <div class="detail-log" id="detail-log">${detailLogHtml(c)}</div>
       <div class="execute-form">
         <div class="row">
-          <span class="mono" style="font-size:11px;color:#4f5967;">POST /execute</span>
+          <span class="mono" style="font-size:11px;color:#8b96a5;">POST /execute</span>
           <select id="action-select">${actionOptions}</select>
         </div>
         <textarea id="payload-textarea" class="mono" spellcheck="false">${esc(state.payload)}</textarea>
@@ -529,7 +535,7 @@ function renderExecuteStatus() {
   try {
     JSON.parse(state.payload);
     statusEl.textContent = "valid JSON";
-    statusEl.style.color = "#4f5967";
+    statusEl.style.color = "#8b96a5";
     sendBtn.disabled = false;
   } catch (err) {
     statusEl.textContent = `invalid JSON — ${err.message}`;
@@ -595,7 +601,7 @@ function launchPreview() {
     lc.count > 3
       ? `  …  ${lc.pattern.replace("{n:03}", pad(lc.count, 3)).replace("{n}", String(lc.count))}`
       : "";
-  return `${ids.join("  ")}${tail}   →   ${lc.wsUrl}   ocpp${lc.ver}   admin :${9101}-${9100 + lc.count}`;
+  return `${ids.join("  ")}${tail}   →   ${lc.wsUrl}   ocpp${lc.ver}   max ${lc.maxChargeRateA}A   admin :${9101}-${9100 + lc.count}`;
 }
 
 function renderLaunchPreview() {
@@ -657,6 +663,10 @@ function renderLaunchModal() {
           <span class="field-label">stagger (seconds)</span>
           <input id="lc-stagger" class="mono" value="${state.lc.staggerSeconds}" />
         </label>
+        <label>
+          <span class="field-label">max charge rate (A)</span>
+          <input id="lc-max-amps" class="mono" value="${state.lc.maxChargeRateA}" title="This charger's physical ceiling (e.g. wired supply/breaker rating) - independent of whatever SetChargingProfile a CSMS later sends." />
+        </label>
         <div class="span-2" style="display:flex;flex-direction:column;gap:6px;">
           <span class="field-label">vendor quirks on these instances</span>
           <div style="display:flex;flex-wrap:wrap;gap:6px;">${quirkChips}</div>
@@ -691,6 +701,11 @@ function renderLaunchModal() {
   });
   document.getElementById("lc-stagger").addEventListener("input", (e) => {
     state.lc.staggerSeconds = Number.parseInt(e.target.value || "0", 10) || 0;
+    renderLaunchPreview();
+  });
+  document.getElementById("lc-max-amps").addEventListener("input", (e) => {
+    state.lc.maxChargeRateA =
+      Math.max(1, Number.parseInt(e.target.value || "0", 10)) || 32;
     renderLaunchPreview();
   });
 }
@@ -808,6 +823,7 @@ const actions = {
         wsUrl: state.lc.wsUrl,
         ver: state.lc.ver,
         staggerSeconds: state.lc.staggerSeconds,
+        maxChargeRateA: state.lc.maxChargeRateA,
         quirks,
       }),
     });
@@ -816,7 +832,34 @@ const actions = {
     renderAll();
   },
   reconnect: async (t) => {
-    await api(`/api/instance/${t.dataset.uid}/reconnect`, { method: "POST" });
+    const uid = Number(t.dataset.uid);
+    // Respawning the process takes a few seconds - show it immediately
+    // rather than leaving the panel looking unresponsive until the next
+    // fleet snapshot arrives.
+    const c = chargerById(uid);
+    if (c) {
+      c.conn = "connecting";
+      c.tx = "idle";
+      c.txId = null;
+      renderFleetRows();
+      renderDetail();
+    }
+    await api(`/api/instance/${uid}/reconnect`, { method: "POST" });
+  },
+  "remove-charger": async (t) => {
+    const uid = Number(t.dataset.uid);
+    const c = chargerById(uid);
+    if (
+      !confirm(
+        `Remove ${c ? c.id : "this charge point"}? This stops its process for good.`,
+      )
+    )
+      return;
+    await api(`/api/instance/${uid}`, { method: "DELETE" });
+    state.chargers = state.chargers.filter((x) => x.uid !== uid);
+    delete state.checked[uid];
+    if (state.sel === uid) state.sel = null;
+    renderAll();
   },
   "quick-fire": async (t) => {
     if (state.sel === null) return;

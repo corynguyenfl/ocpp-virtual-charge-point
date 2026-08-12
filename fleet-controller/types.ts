@@ -15,6 +15,7 @@ export interface ChargerRecord {
   ver: OcppVersion;
   wsUrl: string;
   port: number;
+  maxChargeRateA: number;
   quirks: string[];
   conn: ConnState;
   tx: TxState;
@@ -64,6 +65,7 @@ export interface LaunchRequest {
   ver: OcppVersion;
   staggerSeconds: number;
   quirks: string[];
+  maxChargeRateA: number;
 }
 
 export interface FleetSnapshot {
